@@ -67,9 +67,10 @@ serveAudioFile filePath req respond = do
 app :: Application
 app req respond =
   case pathInfo req of
-    [] -> staticApp (defaultFileServerSettings "static") req respond
+    --[] -> staticApp (defaultFileServerSettings "static") req respond
     ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
-    _ -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "Not Found"
+    --_ -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "Not Found"
+    _ -> staticApp (defaultFileServerSettings "static") req respond
 
 main :: IO ()
 main = do
