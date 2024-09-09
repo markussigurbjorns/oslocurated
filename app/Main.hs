@@ -1,74 +1,78 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
-import Data.ByteString.Lazy.Char8 (pack)
-import Network.HTTP.Types (status200, status404)
+import Control.Exception (IOException, catch)
+import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy qualified as BL
+import Data.ByteString.Lazy.Char8 qualified as BLC
+import Data.Int (Int64)
+import Data.Maybe (fromMaybe)
+import Data.Text (unpack)
+import Network.HTTP.Types (status200, status206, status404,hContentType,hContentLength)
+import Network.HTTP.Types.Header (hContentRange, hRange)
 import Network.Wai
-import Network.Wai.Application.Static
+import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.RequestLogger
--- A simple application that responds with "Hello, world!" for the "/hello" route
-helloApp :: Application
-helloApp req respond =
-  case pathInfo req of
-    ["hello"] -> respond $ responseLBS status200 [("Content-Type", "text/plain")] "Hello, world!"
-    _         -> respond $ responseLBS status200 [("Content-Type", "text/plain")] "Not Found"
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import System.IO (IOMode (..), withBinaryFile)
 
--- Combine the static file server and the custom application
+-- Returns a tuple of Int64 (start, end) representing the byte range
+parseRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
+parseRange rangeHeader fileSize =
+    case BSC.splitAt 6 rangeHeader of
+        ("bytes=", byteRange) -> parseByteRange (BSC.drop 6 rangeHeader) fileSize
+        _ -> (0, fileSize - 1)  -- Default case if format is incorrect or no range specified
+
+-- Helper function to parse byte ranges from ByteString
+parseByteRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
+parseByteRange byteRange fileSize =
+    let (startStr, endStr) = BSC.break (=='-') byteRange
+        start = fromMaybe 0 (readMaybeInt (BSC.unpack startStr))
+        end = fromMaybe (fileSize - 1) (readMaybeInt (BSC.unpack (BSC.drop 1 endStr)))
+    in (start, end)
+
+-- Safe reading of Int64 from String, returning Maybe Int64
+readMaybeInt :: String -> Maybe Int64
+readMaybeInt str = case reads str of
+    [(val, "")] -> Just val
+    _ -> Nothing
+
+-- Serve audio file from the given file path
+serveAudioFile :: FilePath -> Application
+serveAudioFile filePath req respond = do
+  fileResult <- catch (Just <$> BLC.readFile filePath) handleReadError
+  case fileResult of
+    Just fileContents -> do
+      let filesize = BL.length fileContents
+      case lookup hRange (requestHeaders req) of
+        -- Handle Range requests (e.g., "Range: bytes=100-200")
+        Just rangeHeader -> do
+          let (start, end) = parseRange rangeHeader filesize
+          let rangeData = BL.take (end - start + 1) $ BL.drop start fileContents
+          let contentRangeHeader = BSC.pack ("bytes " <> show start <> "-" <> show end <> "/" <> show filesize)
+          respond $
+            responseLBS
+              status206
+              [(hContentRange, contentRangeHeader), (hContentLength, BSC.pack(show (end - start + 1))), (hContentType, "audio/mpeg")]
+              rangeData
+        Nothing -> do
+          let headers = [(hContentType, "audio/mpeg"), (hContentLength, BSC.pack(show filesize))]
+          respond $ responseLBS status200 headers fileContents
+    Nothing -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "File not found"
+  where
+    handleReadError :: IOException -> IO (Maybe BL.ByteString)
+    handleReadError _ = return Nothing
+
+-- Main application
 app :: Application
 app req respond =
-  if null (pathInfo req)
-    then staticApp myStaticSettings req respond
-    else helloApp req respond
-
--- Define StaticSettings with the correct directory path
-myStaticSettings :: StaticSettings
-myStaticSettings = defaultFileServerSettings "static"
+  case pathInfo req of
+    [] -> staticApp (defaultFileServerSettings "static") req respond
+    ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
+    _ -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "Not Found"
 
 main :: IO ()
 main = do
   putStrLn "Starting server on port 3000"
   run 3000 $ logStdoutDev app
-
-{-
-main :: IO ()
-main =
-  run 3000 $
-    logStdout $
-      staticApp $
-        defaultFileServerSettings "static"
--}
-{-
-main :: IO ()
-main = run 3000 $ \_req send ->
-  send $
-    responseBuilder
-      status200
-      [("Content-Type", "text/plain; charset=utf-8")]
-      "Hello, World!"
--}
-
-{-
-main :: IO ()
-main = do
-  putStrLn "Starting server on port 3000..."
-  run 3000 app
-
--- Application definition
-app :: Application
-app req send = do
-  response <-
-    case pathInfo req of
-      [] ->
-        case requestMethod req of
-          "GET" -> responseBuilder status200 [("Content-Type", "text/plain")] ("Hello Heimur")
-  pure send response
--}
-{-
-  let method = requestMethod req
-      path = pathInfo req
-
-  case (method, path) of
-    ("GET", []) -> staticApp (defaultFileServerSettings "static") req respond
-    ("GET", ["hello", name]) -> respond $ responseLBS status200 [("Content-Type", "text/plain")] (pack $ "Hello, " ++ show name ++ "!")
-    _ -> respond $ responseLBS status404 [("Content-Type", "text/plain")] (pack "404 not found")
--}

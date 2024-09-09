@@ -34,7 +34,9 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , directory
     , http-types
+    , text
     , wai
     , wai-app-static
     , wai-extra
@@ -53,8 +55,10 @@ executable oslocurated-exe
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , directory
     , http-types
     , oslocurated
+    , text
     , wai
     , wai-app-static
     , wai-extra
@@ -74,8 +78,10 @@ test-suite oslocurated-test
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , directory
     , http-types
     , oslocurated
+    , text
     , wai
     , wai-app-static
     , wai-extra

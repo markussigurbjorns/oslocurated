@@ -27,7 +27,9 @@ dependencies:
 - bytestring
 - wai-app-static
 - wai-extra
-  
+- text
+- directory
+
 ghc-options:
 - -Wall
 - -Wcompat
