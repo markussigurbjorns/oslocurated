@@ -15,7 +15,6 @@ import Network.Wai
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
-import System.IO (IOMode (..), withBinaryFile)
 
 -- Returns a tuple of Int64 (start, end) representing the byte range
 parseRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
