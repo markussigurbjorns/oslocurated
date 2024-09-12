@@ -24,6 +24,8 @@ source-repository head
   location: https://github.com/githubuser/oslocurated
 
 library
+  exposed-modules:
+      PCClient
   other-modules:
       Paths_oslocurated
   autogen-modules:
@@ -36,6 +38,7 @@ library
     , bytestring
     , directory
     , http-types
+    , postgresql-simple
     , text
     , wai
     , wai-app-static
@@ -58,6 +61,7 @@ executable oslocurated-exe
     , directory
     , http-types
     , oslocurated
+    , postgresql-simple
     , text
     , wai
     , wai-app-static
@@ -81,6 +85,7 @@ test-suite oslocurated-test
     , directory
     , http-types
     , oslocurated
+    , postgresql-simple
     , text
     , wai
     , wai-app-static

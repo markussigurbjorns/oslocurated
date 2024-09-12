@@ -29,6 +29,7 @@ dependencies:
 - wai-extra
 - text
 - directory
+- postgresql-simple
 
 ghc-options:
 - -Wall
