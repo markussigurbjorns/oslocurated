@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 
 module PCClient
   ( getConnection,
@@ -10,13 +11,12 @@ where
 
 import Database.PostgreSQL.Simple (ConnectInfo, Connection, connect, connectDatabase, connectHost, connectPassword, connectPort, connectUser, defaultConnectInfo, execute_, execute, query_, query)
 import Database.PostgreSQL.Simple.FromRow
-import Data.ByteString.Char8 (ByteString, pack)
+import Data.ByteString.Char8 qualified as BSC
 
 data User = User { userId :: Int, userName :: String, userAge :: Int } deriving (Show)
 
 instance FromRow User where
   fromRow = User <$> field <*> field <*> field
-
 
 getConnection :: IO Connection
 getConnection = connect dbInfo
@@ -43,13 +43,11 @@ createTable conn = do
   putStrLn "Table created."
 
 
-insertDummyData :: Connection -> IO ()
-insertDummyData conn = do
+insertDummyData :: Connection -> (BSC.ByteString, Int) -> IO ()
+insertDummyData conn (name, age) = do
   let insertQuery = "INSERT INTO public.users (name, age) VALUES (?, ?);"
   -- Inserting dummy data
-  _ <- execute conn insertQuery (pack "Alice", 25 :: Int)
-  _ <- execute conn insertQuery (pack "Bob", 30 :: Int)
-  _ <- execute conn insertQuery (pack "Charlie", 22 :: Int)
+  _ <- execute conn insertQuery (name, age)
   putStrLn "Dummy data inserted."
 
 fetchUsers :: Connection -> IO [User]
