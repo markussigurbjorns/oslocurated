@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import Control.Exception (IOException, catch)
 import Data.ByteString qualified as BS
@@ -9,7 +9,7 @@ import Data.ByteString.Lazy.Char8 qualified as BLC
 import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
 import Data.Text (unpack)
-import Network.HTTP.Types (status200, status206, status404,hContentType,hContentLength)
+import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status404)
 import Network.HTTP.Types.Header (hContentRange, hRange)
 import Network.Wai
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
@@ -19,23 +19,23 @@ import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 -- Returns a tuple of Int64 (start, end) representing the byte range
 parseRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
 parseRange rangeHeader fileSize =
-    case BSC.splitAt 6 rangeHeader of
-        ("bytes=", byteRange) -> parseByteRange (BSC.drop 6 rangeHeader) fileSize
-        _ -> (0, fileSize - 1)  -- Default case if format is incorrect or no range specified
+  case BSC.splitAt 6 rangeHeader of
+    ("bytes=", byteRange) -> parseByteRange (BSC.drop 6 rangeHeader) fileSize
+    _ -> (0, fileSize - 1) -- Default case if format is incorrect or no range specified
 
 -- Helper function to parse byte ranges from ByteString
 parseByteRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
 parseByteRange byteRange fileSize =
-    let (startStr, endStr) = BSC.break (=='-') byteRange
-        start = fromMaybe 0 (readMaybeInt (BSC.unpack startStr))
-        end = fromMaybe (fileSize - 1) (readMaybeInt (BSC.unpack (BSC.drop 1 endStr)))
-    in (start, end)
+  let (startStr, endStr) = BSC.break (== '-') byteRange
+      start = fromMaybe 0 (readMaybeInt (BSC.unpack startStr))
+      end = fromMaybe (fileSize - 1) (readMaybeInt (BSC.unpack (BSC.drop 1 endStr)))
+   in (start, end)
 
 -- Safe reading of Int64 from String, returning Maybe Int64
 readMaybeInt :: String -> Maybe Int64
 readMaybeInt str = case reads str of
-    [(val, "")] -> Just val
-    _ -> Nothing
+  [(val, "")] -> Just val
+  _ -> Nothing
 
 -- Serve audio file from the given file path
 serveAudioFile :: FilePath -> Application
@@ -53,10 +53,10 @@ serveAudioFile filePath req respond = do
           respond $
             responseLBS
               status206
-              [(hContentRange, contentRangeHeader), (hContentLength, BSC.pack(show (end - start + 1))), (hContentType, "audio/mpeg")]
+              [(hContentRange, contentRangeHeader), (hContentLength, BSC.pack (show (end - start + 1))), (hContentType, "audio/mpeg")]
               rangeData
         Nothing -> do
-          let headers = [(hContentType, "audio/mpeg"), (hContentLength, BSC.pack(show filesize))]
+          let headers = [(hContentType, "audio/mpeg"), (hContentLength, BSC.pack (show filesize))]
           respond $ responseLBS status200 headers fileContents
     Nothing -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "File not found"
   where
@@ -67,9 +67,8 @@ serveAudioFile filePath req respond = do
 app :: Application
 app req respond =
   case pathInfo req of
-    --[] -> staticApp (defaultFileServerSettings "static") req respond
     ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
-    --_ -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "Not Found"
+    ["admin"] -> respond $ responseLBS status200 [("Content-Type", "text/plain")] "ADMIN PAGE WIP"
     _ -> staticApp (defaultFileServerSettings "static") req respond
 
 main :: IO ()

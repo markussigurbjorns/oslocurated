@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       PCClient
+      Segmenter
   other-modules:
       Paths_oslocurated
   autogen-modules:
@@ -39,7 +40,9 @@ library
     , directory
     , http-types
     , postgresql-simple
+    , process
     , text
+    , time
     , wai
     , wai-app-static
     , wai-extra
@@ -62,7 +65,9 @@ executable oslocurated-exe
     , http-types
     , oslocurated
     , postgresql-simple
+    , process
     , text
+    , time
     , wai
     , wai-app-static
     , wai-extra
@@ -86,7 +91,9 @@ test-suite oslocurated-test
     , http-types
     , oslocurated
     , postgresql-simple
+    , process
     , text
+    , time
     , wai
     , wai-app-static
     , wai-extra
