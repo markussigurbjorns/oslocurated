@@ -8,7 +8,6 @@ import Data.ByteString.Lazy qualified as BL
 import Data.ByteString.Lazy.Char8 qualified as BLC
 import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Ap)
 import Data.Text (unpack)
 import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status401, status404)
 import Network.HTTP.Types.Header (hAuthorization, hContentRange, hRange, hWWWAuthenticate)
@@ -70,6 +69,7 @@ serveAdmin _ respond =
   respond $
     responseFile status200 [("Content-Type", "text/html")] "static/admin.html" Nothing
 
+-- Middleware for basic auth
 checkBasicAuth :: BSC.ByteString -> Bool
 checkBasicAuth _ = True
 
@@ -95,7 +95,6 @@ app :: Application
 app req respond =
   case pathInfo req of
     ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
-    -- ["admin"] -> serveAdmin req respond
     ["admin"] -> withBasicAuth serveAdmin req respond
     _ -> staticApp (defaultFileServerSettings "static") req respond
 
