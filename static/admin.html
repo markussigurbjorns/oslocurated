@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Add your styles here -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .record-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .record-button.stop {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Recording Control</h1>
+        <button id="recordBtn" class="record-button">Start Recording</button>
+    </div>
+
+    <script>
+        // Initial recording state (false means not recording)
+        let isRecording = false;
+
+        // Get the button element
+        const recordBtn = document.getElementById('recordBtn');
+
+        // Function to update the button based on the recording state
+        function updateButton() {
+            if (isRecording) {
+                recordBtn.textContent = 'Stop Recording';
+                recordBtn.classList.add('stop');
+            } else {
+                recordBtn.textContent = 'Start Recording';
+                recordBtn.classList.remove('stop');
+            }
+        }
+
+        // Toggle recording state when the button is clicked
+        recordBtn.addEventListener('click', function() {
+            isRecording = !isRecording;
+            updateButton();
+
+            // Send request to backend (you can add this logic later)
+            // Example: fetch('/toggle-recording', { method: 'POST', body: JSON.stringify({ recording: isRecording }) });
+        });
+
+        // Initialize the button text and appearance
+        updateButton();
+    </script>
+</body>
+</html>

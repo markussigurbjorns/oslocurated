@@ -63,12 +63,19 @@ serveAudioFile filePath req respond = do
     handleReadError :: IOException -> IO (Maybe BL.ByteString)
     handleReadError _ = return Nothing
 
+-- Serve the admin.html file
+serveAdmin :: (Response -> IO ResponseReceived) -> IO ResponseReceived
+serveAdmin respond = respond $
+    responseFile status200 [("Content-Type", "text/html")] "static/admin.html" Nothing
+
+
 -- Main application
 app :: Application
 app req respond =
   case pathInfo req of
     ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
-    ["admin"] -> respond $ responseLBS status200 [("Content-Type", "text/plain")] "ADMIN PAGE WIP"
+    -- ["admin"] -> respond $ responseLBS status200 [("Content-Type", "text/plain")] "ADMIN PAGE WIP"
+    ["admin"] -> serveAdmin respond
     _ -> staticApp (defaultFileServerSettings "static") req respond
 
 main :: IO ()
