@@ -8,8 +8,9 @@ import Data.ByteString.Lazy qualified as BL
 import Data.ByteString.Lazy.Char8 qualified as BLC
 import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
+import Data.Monoid (Ap)
 import Data.Text (unpack)
-import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status404)
+import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status401, status404)
 import Network.HTTP.Types.Header (hContentRange, hRange)
 import Network.Wai
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
@@ -64,18 +65,38 @@ serveAudioFile filePath req respond = do
     handleReadError _ = return Nothing
 
 -- Serve the admin.html file
-serveAdmin :: (Response -> IO ResponseReceived) -> IO ResponseReceived
-serveAdmin respond = respond $
+serveAdmin :: Application
+serveAdmin _ respond =
+  respond $
     responseFile status200 [("Content-Type", "text/html")] "static/admin.html" Nothing
 
+checkBasicAuth :: BSC.ByteString -> Bool
+checkBasicAuth _ = True
+
+reqiureAuth :: Application
+reqiureAuth _ respond =
+  respond $
+    responseLBS
+      status401
+      [(hContentType, "text/plain"), ("WWW-Authenticate", "Basic realm=\"admin\"")]
+      "Need Auth"
+
+withBasicAuth :: Middleware
+withBasicAuth successHandler req respond =
+  case lookup "Authorization" (requestHeaders req) of
+    Just authHeader ->
+      if checkBasicAuth authHeader
+        then successHandler req respond
+        else reqiureAuth req respond
+    Nothing -> reqiureAuth req respond
 
 -- Main application
 app :: Application
 app req respond =
   case pathInfo req of
     ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
-    -- ["admin"] -> respond $ responseLBS status200 [("Content-Type", "text/plain")] "ADMIN PAGE WIP"
-    ["admin"] -> serveAdmin respond
+    -- ["admin"] -> serveAdmin req respond
+    ["admin"] -> withBasicAuth serveAdmin req respond
     _ -> staticApp (defaultFileServerSettings "static") req respond
 
 main :: IO ()
