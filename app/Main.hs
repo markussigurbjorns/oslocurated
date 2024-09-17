@@ -11,7 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Ap)
 import Data.Text (unpack)
 import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status401, status404)
-import Network.HTTP.Types.Header (hContentRange, hRange)
+import Network.HTTP.Types.Header (hAuthorization, hContentRange, hRange, hWWWAuthenticate)
 import Network.Wai
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
@@ -78,12 +78,12 @@ reqiureAuth _ respond =
   respond $
     responseLBS
       status401
-      [(hContentType, "text/plain"), ("WWW-Authenticate", "Basic realm=\"admin\"")]
+      [(hContentType, "text/plain"), (hWWWAuthenticate, "Basic realm=\"admin\"")]
       "Need Auth"
 
 withBasicAuth :: Middleware
 withBasicAuth successHandler req respond =
-  case lookup "Authorization" (requestHeaders req) of
+  case lookup hAuthorization (requestHeaders req) of
     Just authHeader ->
       if checkBasicAuth authHeader
         then successHandler req respond
