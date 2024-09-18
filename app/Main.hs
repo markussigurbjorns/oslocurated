@@ -67,7 +67,7 @@ serveAudioFile filePath req respond = do
 serveAdmin :: Application
 serveAdmin _ respond =
   respond $
-    responseFile status200 [("Content-Type", "text/html")] "static/admin.html" Nothing
+    responseFile status200 [(hContentType, "text/html")] "static/admin.html" Nothing
 
 -- Middleware for basic auth
 checkBasicAuth :: BSC.ByteString -> Bool
