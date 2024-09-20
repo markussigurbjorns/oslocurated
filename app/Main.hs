@@ -5,16 +5,18 @@ import Control.Exception (IOException, catch)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Lazy qualified as BL
+import Data.ByteString.Lazy qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BLC
 import Data.Int (Int64)
 import Data.Maybe (fromMaybe)
 import Data.Text (unpack)
-import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status401, status404)
+import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status401, status404, status500)
 import Network.HTTP.Types.Header (hAuthorization, hContentRange, hRange, hWWWAuthenticate)
 import Network.Wai
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Segmenter (startRecording)
 
 -- Returns a tuple of Int64 (start, end) representing the byte range
 parseRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
@@ -58,7 +60,7 @@ serveAudioFile filePath req respond = do
         Nothing -> do
           let headers = [(hContentType, "audio/mpeg"), (hContentLength, BSC.pack (show filesize))]
           respond $ responseLBS status200 headers fileContents
-    Nothing -> respond $ responseLBS status404 [("Content-Type", "text/plain")] "File not found"
+    Nothing -> respond $ responseLBS status404 [(hContentType, "text/plain")] "File not found"
   where
     handleReadError :: IOException -> IO (Maybe BL.ByteString)
     handleReadError _ = return Nothing
@@ -90,13 +92,40 @@ withBasicAuth successHandler req respond =
         else reqiureAuth req respond
     Nothing -> reqiureAuth req respond
 
+handleSegment :: Application
+handleSegment req respond =
+  getRequestBody req >>= \body ->
+    case body of
+      "record" -> do
+        _ <- startRecording "test"
+        respond $ responseLBS status200 [(hContentType, "text/plain")] "you wrote record"
+      _ ->
+        respond $ responseLBS status200 [(hContentType, "text/plain")] body
+
+getRequestBody :: Request -> IO BLC.ByteString
+getRequestBody req = loop mempty
+  where
+    loop acc = do
+      chunk <- getRequestBodyChunk req
+      if BSC.null chunk
+        then return acc
+        else loop (acc <> BLC.fromStrict chunk)
+
 -- Main application
 app :: Application
 app req respond =
-  case pathInfo req of
-    ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
-    ["admin"] -> withBasicAuth serveAdmin req respond
-    _ -> staticApp (defaultFileServerSettings "static") req respond
+  case requestMethod req of
+    "GET" ->
+      case pathInfo req of
+        ["audio", fileName] -> serveAudioFile ("audio/" <> unpack fileName) req respond
+        ["admin"] -> withBasicAuth serveAdmin req respond
+        _ -> staticApp (defaultFileServerSettings "static") req respond
+    "POST" ->
+      case pathInfo req of
+        ["segment"] -> handleSegment req respond
+        _ -> respond $ responseLBS status500 [(hContentType, "text/plain")] "Bad Request"
+    _ ->
+      respond $ responseLBS status500 [(hContentType, "text/plain")] "Bad Request"
 
 main :: IO ()
 main = do
