@@ -11,7 +11,6 @@ import System.Process (ProcessHandle, createProcess, proc, terminateProcess)
 -- Function to start recording
 startRecording :: String -> IO ProcessHandle
 startRecording name = do
-  -- Get the current time and format it for the filename
   currentTime <- getCurrentTime
   let timestamp = formatTime defaultTimeLocale "%Y-%m-%d_%H-%M-%S" currentTime
       filename = name ++ "_" ++ timestamp ++ ".mp3"
@@ -19,12 +18,12 @@ startRecording name = do
   -- Start the ffmpeg process
   (_, _, _, ph) <- createProcess (proc "ffmpeg" ["-i", "https://oslocurated.com/stream.mp3", "-c", "copy", filename])
   putStrLn $ "Recording started: " ++ filename
-  hFlush stdout -- Ensure message is flushed to stdout
-  return ph -- Return the ProcessHandle
+  hFlush stdout
+  return ph
 
 -- Function to stop recording
 stopRecording :: ProcessHandle -> IO ()
 stopRecording processHandle = do
   terminateProcess processHandle
   putStrLn "Recording stopped"
-  hFlush stdout -- Ensure message is flushed to stdout
+  hFlush stdout
