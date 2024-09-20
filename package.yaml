@@ -32,6 +32,7 @@ dependencies:
 - text
 - directory
 - postgresql-simple
+- containers
 
 ghc-options:
 - -Wall

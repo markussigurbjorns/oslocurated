@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -37,6 +37,7 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , http-types
     , postgresql-simple
@@ -61,6 +62,7 @@ executable oslocurated-exe
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , http-types
     , oslocurated
@@ -87,6 +89,7 @@ test-suite oslocurated-test
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , http-types
     , oslocurated

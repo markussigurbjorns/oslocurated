@@ -1,6 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Concurrent.MVar
 import Control.Exception (IOException, catch)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
@@ -8,6 +9,8 @@ import Data.ByteString.Lazy qualified as BL
 import Data.ByteString.Lazy qualified as BS
 import Data.ByteString.Lazy.Char8 qualified as BLC
 import Data.Int (Int64)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text (unpack)
 import Network.HTTP.Types (hContentLength, hContentType, status200, status206, status401, status404, status500)
@@ -17,6 +20,7 @@ import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Segmenter (startRecording)
+import System.Process (ProcessHandle)
 
 -- Returns a tuple of Int64 (start, end) representing the byte range
 parseRange :: BSC.ByteString -> Int64 -> (Int64, Int64)
@@ -92,12 +96,12 @@ withBasicAuth successHandler req respond =
         else reqiureAuth req respond
     Nothing -> reqiureAuth req respond
 
-handleSegment :: Application
-handleSegment req respond =
+handleSegment :: MVar (Map String ProcessHandle) -> Application
+handleSegment processHandlesVar req respond =
   getRequestBody req >>= \body ->
     case body of
       "record" -> do
-        _ <- startRecording "test"
+        startRecording processHandlesVar "test"
         respond $ responseLBS status200 [(hContentType, "text/plain")] "you wrote record"
       _ ->
         respond $ responseLBS status200 [(hContentType, "text/plain")] body
@@ -112,8 +116,8 @@ getRequestBody req = loop mempty
         else loop (acc <> BLC.fromStrict chunk)
 
 -- Main application
-app :: Application
-app req respond =
+app :: MVar (Map String ProcessHandle) -> Application
+app processHandlesVar req respond =
   case requestMethod req of
     "GET" ->
       case pathInfo req of
@@ -122,7 +126,7 @@ app req respond =
         _ -> staticApp (defaultFileServerSettings "static") req respond
     "POST" ->
       case pathInfo req of
-        ["segment"] -> handleSegment req respond
+        ["segment"] -> handleSegment processHandlesVar req respond
         _ -> respond $ responseLBS status500 [(hContentType, "text/plain")] "Bad Request"
     _ ->
       respond $ responseLBS status500 [(hContentType, "text/plain")] "Bad Request"
@@ -130,4 +134,5 @@ app req respond =
 main :: IO ()
 main = do
   putStrLn "Starting server on port 3000"
-  run 3000 $ logStdoutDev app
+  processHandlesVar <- newMVar Map.empty
+  run 3000 $ logStdoutDev (app processHandlesVar)
