@@ -19,7 +19,7 @@ import Network.Wai
 import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
-import Segmenter (startRecording)
+import Segmenter (startRecording, stopRecording)
 import System.Process (ProcessHandle)
 
 -- Returns a tuple of Int64 (start, end) representing the byte range
@@ -102,7 +102,10 @@ handleSegment processHandlesVar req respond =
     case body of
       "record" -> do
         startRecording processHandlesVar "test"
-        respond $ responseLBS status200 [(hContentType, "text/plain")] "you wrote record"
+        respond $ responseLBS status200 [(hContentType, "text/plain")] ("start recording " <> body)
+      "stop" -> do
+        stopRecording processHandlesVar "test"
+        respond $ responseLBS status200 [(hContentType, "text/plain")] ("stop recording " <> body)
       _ ->
         respond $ responseLBS status200 [(hContentType, "text/plain")] body
 
